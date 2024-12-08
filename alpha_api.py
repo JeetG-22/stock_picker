@@ -10,10 +10,10 @@ if (ALPHA_VANTAGE_API_KEY is None):
 
 print(f"Loaded Alpha Vantage API Key: {ALPHA_VANTAGE_API_KEY}")
 
+
+# Notes
+
 # Economic Indicator
-
 # Analytics API
-
 # Fundamentals API
-
 # Technical Indicator API later 
