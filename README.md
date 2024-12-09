@@ -95,7 +95,7 @@ So, we created `tech_stock_list_dl.py`, which let us download all the stocks lis
 In all, we fetched **3319** stocks, where **559** of them ended up being technology stocks:
 
 ```shell
-(venv) example@example stock_picker % python3 tech_stock_list_dl.py
+(venv) user@computer stock_picker % python3 tech_stock_list_dl.py
 ```
 ```
 Raw API data saved to stock_list_dl.json
@@ -105,6 +105,76 @@ Unique technology stocks after deduplication: 559
 Data inserted: 559 stocks successfully into tech_stocks table.
 Number of records in the database: 559
 ```
+
+### Section Intentionally Left Blank for the finance side of things
+
+
+
+(After talking about how we decided the top X stocks)
+
+### Ticker Relevance in the Media
+Surely we can create models and analyze stock data to figure out the top technology stocks in a given moment. However, we realize the need for supplementing this data with actual news source data, as knowing how people discuss/report on a stock is also important to take into consideration. So, we decided to look for an API that would give us news articles for each ticker, allowing us to count how many there are, and scrape the new articles in order to locate keywords in each article.
+
+We found an API called Finnhub. Conveniently, they also provide a Pip package to interact with their API. So we created the script `find_articles.py`, which does the following:
+
+1. Connects to our database
+2. Creates the following table if it doesn't already exist:
+
+```sql
+CREATE TABLE IF NOT EXISTS news (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, -- Helps us uniquely identify each news article later
+    ticker TEXT NOT NULL, -- NOT NULL anything that is crucial
+    category TEXT,
+    datetime TEXT NOT NULL,
+    headline TEXT NOT NULL,
+    image TEXT,
+    related TEXT,
+    source TEXT NOT NULL,
+    summary TEXT,
+    url TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Help us know when the script pulled in the article
+    FOREIGN KEY (ticker) REFERENCES tech_stocks(symbol), -- Keeps tickers consistent to help aggregate data later
+    UNIQUE (ticker, datetime, headline, source) -- Keeps entries unique, so that all articles are unique and there are no duplicates
+);
+```
+
+3. With each provided ticker, queries the Finnhub API, retrieving all articles for each `ticker` written between `from_date` and `to_date`
+
+4. Displays how many articles were found, how many new articles were found, and how many duplicates were skipped
+
+When ran for the first time with tickers `["AAPL", "GOOGL", "AMZN", "MSFT", "TSLA"]`, for example, the table doesn't exist, nor do any articles for these tickers exist so all articles will be added to the table:
+
+```shell
+(venv) user@computer stock_picker % python3 find_articles.py  
+AAPL:   Found 174 articles, inserted 174 new articles, skipped 0 duplicate articles.
+GOOGL:  Found 178 articles, inserted 178 new articles, skipped 0 duplicate articles.
+AMZN:   Found 220 articles, inserted 220 new articles, skipped 0 duplicate articles.
+MSFT:   Found 199 articles, inserted 199 new articles, skipped 0 duplicate articles.
+TSLA:   Found 212 articles, inserted 212 new articles, skipped 0 duplicate articles.
+```
+
+However, if we adjust the dates slightly to overlap some of the last date range, and adjust the tickers, some results will be skipped.
+
+If we exchange 3 tickers:
+```shell
+(venv) user@computer stock_picker % python3 find_articles.py  
+AAPL:   Found 174 articles, inserted 0 new articles, skipped 174 duplicate articles.
+TSLA:   Found 212 articles, inserted 0 new articles, skipped 212 duplicate articles.
+ADP:    Found 12 articles, inserted 12 new articles, skipped 0 duplicate articles.
+LYFT:   Found 12 articles, inserted 12 new articles, skipped 0 duplicate articles.
+OKTA:   Found 39 articles, inserted 39 new articles, skipped 0 duplicate articles.
+```
+
+If we add 3 more days of history, totalling 10:
+```shell
+(venv) user@computer stock_picker % python3 find_articles.py
+AAPL:   Found 215 articles, inserted 41 new articles, skipped 174 duplicate articles.
+TSLA:   Found 239 articles, inserted 27 new articles, skipped 212 duplicate articles.
+ADP:    Found 17 articles, inserted 5 new articles, skipped 12 duplicate articles.
+LYFT:   Found 14 articles, inserted 2 new articles, skipped 12 duplicate articles.
+OKTA:   Found 45 articles, inserted 6 new articles, skipped 39 duplicate articles.
+```
+
 
 
 
