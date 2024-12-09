@@ -5,6 +5,7 @@ import os
 import sqlite3
 from dotenv import load_dotenv
 from datetime import date, timedelta
+import time
 
 load_dotenv()
 
@@ -15,14 +16,17 @@ conn = sqlite3.connect(SQLITE_DATABASE_PATH)
 
 finnhub_client = finnhub.Client(api_key=FINNHUB_API_KEY)
 
-tickers = ["AAPL", "TSLA", "ADP", "LYFT", "OKTA"] # Example tickers, TODO replace with actual stuff later
-
 n_days_ago = 10 # Free tier limit is 365 days, determines how many days back to fetch news from
 
 from_date = (date.today() - timedelta(days=n_days_ago)).isoformat()
 to_date = date.today().isoformat()
 
 cur = conn.cursor()
+
+tickers = conn.execute("SELECT symbol FROM tech_stocks WHERE market_cap > 2000000000").fetchall()
+tickers = [ticker[0] for ticker in tickers] # convert from list of tuples to list of strings
+
+print(f"Found {len(tickers)} tech stocks in the database.")
 
 # Create the news table
 cur.execute("""
@@ -44,6 +48,7 @@ CREATE TABLE IF NOT EXISTS news (
 """)
 
 # Fetch news for each ticker
+ticker_count = 1
 for ticker in tickers:
     result = finnhub_client.company_news(ticker, _from=from_date, to=to_date)
 
@@ -72,11 +77,14 @@ for ticker in tickers:
         else:
             skip_count += 1
 
+    time.sleep(1.05) # Sleep for 1.05 seconds to avoid rate limiting
+
     # Commit the changes after processing all articles for this ticker
     conn.commit()
 
     # Print the summary for this ticker
-    print(f"{ticker}:\tFound {len(result)} articles, inserted {insert_count} new articles, skipped {skip_count} duplicate articles.")
+    print(f"{ticker} (#{ticker_count}):\tFound {len(result)} articles, inserted {insert_count} new articles, skipped {skip_count} duplicate articles.")
+    ticker_count += 1
 
 # Close the connection
 conn.close()

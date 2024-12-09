@@ -1,6 +1,8 @@
 # stock_picker: CS210 Project
 Predicting Top 5 Tech Stocks To Buy
 
+## Our Python Environment
+
 ### Create Python Virtual Environment
 In this project, we utilized Python virtual enviroments to keep pip packages consistent across all machines, while avoiding  externally managed environment errors. 
 
@@ -76,7 +78,7 @@ pip install python-dotenv
 python3 test_sqlite_connection.py
 ```
 
-### Locating Stocks in the Technology Sector
+## Locating Stocks in the Technology Sector
 One of the most difficult parts of this project was trying to locate an online resource that would provide a list of stocks that exist in the technology sector, as that is what we are targetting. Doing some research, we were able to locate [this StockAnalysis website](https://stockanalysis.com/list/nasdaq-stocks/), which listed every stock and allowed a column for sector. There was no *last updated* anywhere, but based on stock prices we realized that the data isn't more than a day old. As this step in the process was only to accumulate NASDAQ stocks in the technology sector anyways, it was good enough for that so we went with it.
 
 After inspecting the data in the Chrome developer tools, we saw that the site sends http get requests to **api.stockanalysis.com**. Surely we thought there was some client authentication involved as most of their filters are locked behind a paywall. After doing some testing in Postman, we realized that this API was completely open and not rate-limited in any way, and we could even ask the API for columns locked behind the web interface's paywall!
@@ -106,13 +108,15 @@ Data inserted: 559 stocks successfully into tech_stocks table.
 Number of records in the database: 559
 ```
 
-### Section Intentionally Left Blank for the finance side of things
+## Section Intentionally Left Blank for the finance side of things
 
 
 
 (After talking about how we decided the top X stocks)
 
-### Ticker Relevance in the Media
+## Ticker Relevance in the Media
+
+### Finding the Articles
 Surely we can create models and analyze stock data to figure out the top technology stocks in a given moment. However, we realize the need for supplementing this data with actual news source data, as knowing how people discuss/report on a stock is also important to take into consideration. So, we decided to look for an API that would give us news articles for each ticker, allowing us to count how many there are, and scrape the new articles in order to locate keywords in each article.
 
 We found an API called Finnhub. Conveniently, they also provide a Pip package to interact with their API. So we created the script `find_articles.py`, which does the following:
@@ -175,6 +179,60 @@ LYFT:   Found 14 articles, inserted 2 new articles, skipped 12 duplicate article
 OKTA:   Found 45 articles, inserted 6 new articles, skipped 39 duplicate articles.
 ```
 
+### Sentiment Analysis
+To programmatically analyze each article, we needed a way where we could calculate the postive, negative, and neutral sentiments. Here's how we did that:
+
+```shell
+(venv) example@computer stock_picker % cd sentiment_scraper
+# Example Run (We don't care about seeing the response of every article, so we append --nolog here)
+(venv) example@computer sentiment_scraper % scrapy crawl db_spider --nolog
+../db/database.sqlite
+Processing article 32/3108 (1.0296010296010296%)...
+```
+
+#### 1. Scraping Each Article
+We already had each article for every stock that we wanted to discover the sentiments of, so we utilized Scrapy to visit every website and pull the HTML code from the website source.
+
+#### 2. Parsing the Article Contents
+After each response came back, if it returned a `200 OK` status code, we took the content of the site and used the Python newspaper library to automatically retrieve the text content of the actual body of the article. We do this so that we avoid "sentimizing" words that aren't a part of the article itself, such as log in buttons, advertisements, cookies, etc.
+
+Notice how we specifically mention the response having a `200` status code. Ultimately, web scraping means that the computer is visiting the website on your behalf, as opposed to you the user physically visiting the website. Some sites don't like when this happens, potentially because of analytical or advertisement reasons, so it is possible that the scraper faced several bot challenges and was not able to load the website successfully. We saw a decent handful of `400 Bad Request`, `401 Unauthorized`, and `403 Forbidden` statuses, and in our runs, we noticed about half of the articles faced this issue:
+
+```sql
+-- News articles that returned a 200 OK status code (had a matching sentiment added)
+sqlite> SELECT COUNT(*) FROM news AS N LEFT JOIN sentiments AS S ON N.id = S.article_id WHERE S.article_id != "";
+1535
+
+-- Total amount of news articles
+sqlite> SELECT COUNT(*) FROM news;
+3108
+```
+
+#### 3. Performing Sentiment Analysis on the Text
+After we retrieved only the body of the article, we decided to run it through a Sentiment Analyzer from nltk (`from nltk.sentiment.vader import SentimentIntensityAnalyzer`). This would take our blob of text, run an algorithm to decide the amount of positive, negative and neutral words come out of it, and rate it with corresponding numbers. If our compound score came out to at least `0.05`, we determined it as an overall positive article. If less, negative, and if exactly `0.05`, neutral. This gave us great weights as to how we can classify the article as a whole so that we can make a final determination about that ticker in the future.
+
+
+#### 4. Inserting the Results into the Database
+Scraping is quite computationally expensive, so we only wanted to do it once. Because of this, we decided to store each of the sentiment results in this table:
+
+```sql
+CREATE TABLE IF NOT EXISTS sentiments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_id INTEGER,
+    url TEXT,
+    score_neg REAL,
+    score_neu REAL,
+    score_pos REAL,
+    score_compound REAL,
+    overall_sentiment TEXT,
+    FOREIGN KEY (article_id) REFERENCES news(id), -- References the news table for easier joins later!
+    UNIQUE (article_id)
+)
+```
+
+Together, with this data now in our database, we could make predictions on the best stocks to buy based on how the tickers were discussed in the media.
+
+## Making the Final Decision
 
 
 
