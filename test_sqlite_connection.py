@@ -18,15 +18,23 @@ conn = sqlite3.connect(SQLITE_DATABASE_PATH)
 # Get a cursor object
 cur = conn.cursor()
 
-# Add a dummy record to the api_responses table
-cur.execute("INSERT INTO api_responses (response_json) VALUES ('{\"example\": \"data\"}');")
+# Create a test table
+cur.execute("""
+CREATE TABLE IF NOT EXISTS test (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    value REAL NOT NULL
+);
+""")
 
-# Fetch the record
-cur.execute("SELECT * FROM api_responses;")
-print(cur.fetchall())
+# Insert some test data
+cur.execute("INSERT INTO test (name, value) VALUES ('test1', 1.0)")
 
-# Remove the dummy record
-cur.execute("DELETE FROM api_responses WHERE response_json = '{\"example\": \"data\"}';")
+# Fetch all results
+results = cur.execute("SELECT * FROM test").fetchall()
+
+# Drop the test table
+cur.execute("DROP TABLE test")
 
 print("Test complete")
 

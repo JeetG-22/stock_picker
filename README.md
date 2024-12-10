@@ -366,4 +366,108 @@ By integrating financial metrics with sentiment analysis, we developed a robust 
 # Running the Project Locally
 This guide will demonstrate how to run the project for yourself! Follow these steps:
 
+1. Create an API Key for Finnhub.io, you can do that by clicking [here](https://finnhub.io/).
+
+2. In the root of the `stock_picker` repository, create a `.env` file with the following properties:
+
+```shell
+FINNHUB_API_KEY="your-finnhub-api-key"
+DB_PATH="path-to-db-file" 
+PLOT_OUTPUT_PATH="path-to-plots"
+```
+
+Explanation:
+
+- `FINNHUB_API_KEY="your-finnhub-api-key"`: Identifies your account with the API calls you will make to Finnhub.io, for pulling news articles for various tickers. 
+
+- `DB_PATH="path-to-db-file"`: Path to the sqlite3 database file. This can be whatever you want, but we used `db/database.sqlite`. **Create an empty file here with read and write permissions in this directory**.
+
+- `PLOT_OUTPUT_PATH="path-to-plots"`: The directory you want to store the final prediction result graphs from matplotlib. Again, this can be whatever you want, but we used `./plots/`. **The directory will be created if it doesn't already exist.**
+
+3. Create a Python virtual environment, and install our dependencies. You can do this with:
+```shell
+python3 -m venv venv
+source venv/vin/activate
+```
+
+Make sure that your Terminal prompt is now preceeded with `(venv)`, like this:
+```shell
+(venv) user@computer stock_picker %
+```
+
+Then finally run:
+```shell
+pip install -r requirements.txt
+```
+to install the dependencies into the virtual environment.
+
+When you open any of our Python files, you may see an underline saying that the module isn't found. You'll need to change your VSCode's Python environment (if you are running from a terminal, you can skip this part):
+
+- Use <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> on MacOS or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> on other systems to open the VSCode Command Palette.
+- Search for **Python: Select Interpreter**
+- Select **Use Python from 'python.defaultinterpreterPath' setting./venv/bin/python**
+
+4. Test the connection to your database file by running `python3 test_sqlite_connection.py`:
+```shell
+(venv) user@computer stock_picker % python3 test_sqlite_connection.py
+Test complete
+```
+
+5. Download the list of tech stocks and import into the database by running `python3 tech_stock_list_dl.py`:
+```shell
+(venv) user@computer stock_picker % python3 tech_stock_list_dl.py
+Total stocks fetched: 3317
+Found 559 technology stocks
+Unique technology stocks after deduplication: 559
+Data inserted: 559 stocks successfully into tech_stocks table.
+Number of records in the database: 559
+```
+*Your numbers may slightly vary, but should be very close to these numbers.*
+
+6. Find all articles on these tickers and perform sentiment analysis by running `python3 find_articles.py`:
+```shell
+(venv) user@computer stock_picker % python3 find_articles.py
+Found 192 tech stocks in the database.
+AAPL (#1):      Found 231 articles, inserted 38 new articles, skipped 0 duplicate articles.
+NVDA (#2):      Found 237 articles, inserted 11 new articles, skipped 0 duplicate articles.
+....
+```
+*As the Finnhub.io API has a rate limit of 60 requests per minute, this may take a few minutes to run!*
+
+7. Calculate financial data and make prediction with valuation data by running `python3 stock_valuation.py`:
+```shell
+(venv) user@computer stock_picker % python3 stock_valuation.py
+Found 192 tech stocks with market cap >= 2000000000
+Processing ARM
+...
+```
+*See our writeup for why we chose a $2B market cap.*
+
+8. Finally, train the model based on financial and sentiment data and predict the top tech stocks to buy right now by running `python3 final_model.py`:
+```shell
+(venv) user@computer stock_picker % python3 final_model.py
+Training the model and plotting the results to ./plots/...
+R-squared on test set: -0.2520
+Model trained and results plotted successfully.
+Enter the number of top stocks to pick: 10
+
+****************************************************************************************************
+Top 10 stock to buy now, based on stock and media data:
+****************************************************************************************************
+
+  symbol  predicted_return
+0   CSCO          2.657976
+1   NVDA          2.441312
+2   AVGO          2.388270
+3    AMD          2.363867
+4   ADBE          2.220817
+5   ASML          1.861253
+6   MSFT          1.840647
+7   QCOM          1.705352
+8   AAPL          1.545829
+9   INTU          1.036270
+```
+
+You'll see the final graphs outputted to the directory you chose!
+
 
