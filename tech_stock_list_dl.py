@@ -2,6 +2,7 @@ import requests
 import sqlite3
 import os
 import sys
+import json
 from dotenv import load_dotenv
 from collections import Counter
 
@@ -17,12 +18,20 @@ if not os.path.exists(SQLITE_DATABASE_PATH):
     print(f"Error: SQLite file not found at {SQLITE_DATABASE_PATH}")
     sys.exit(1)
 
+# File to save raw API data
+RAW_DATA_FILE = "stock_list_dl.json"
+
 # Fetch data from API
 data = []
 url = URL
 response = requests.get(url)
 response_data = response.json().get("data", {}).get("data", [])
 data.extend(response_data)
+
+# Save raw data to a file
+with open(RAW_DATA_FILE, "w") as file:
+    json.dump(data, file, indent=4)
+print(f"Raw API data saved to {RAW_DATA_FILE}")
 
 print(f"Total stocks fetched: {len(data)}")
 
@@ -52,30 +61,9 @@ CREATE TABLE IF NOT EXISTS tech_stocks (
     symbol TEXT PRIMARY KEY,
     name TEXT,
     market_cap REAL,
-    price REAL,
-    change REAL,
-    revenue REAL,
-    sector TEXT,
-    industry TEXT,
-    volume REAL,
-    revenue_growth REAL,
-    net_income REAL,
-    fcf REAL,
-    net_cash REAL,
-    pe_ratio REAL,
-    current_eps REAL,
-    projected_eps REAL,
-    stock_pe_ratio_forward REAL,
-    earnings_growth REAL,
-    beta REAL,
-    current_price REAL,
-    intrinsic_value REAL,
-    fair_value REAL,
-    valuation_gap REAL,
-    valuation REAL
+    sector TEXT
 );
 """)
-
 
 # Insert stocks into the database
 inserted_count = 0
@@ -84,24 +72,13 @@ for stock in unique_stocks:
     try:
         cur.execute("""
         INSERT OR REPLACE INTO tech_stocks (
-            symbol, name, market_cap, price, change, revenue, sector, industry, 
-            volume, revenue_growth, net_income, fcf, net_cash, pe_ratio
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            symbol, name, market_cap, sector
+        ) VALUES (?, ?, ?, ?);
         """, (
             stock.get("s"),
             stock.get("n"),
             stock.get("marketCap"),
-            stock.get("price"),
-            stock.get("change"),
-            stock.get("revenue"),
             stock.get("sector"),
-            stock.get("industry"),
-            stock.get("volume"),
-            stock.get("revenueGrowth"),
-            stock.get("netIncome"),
-            stock.get("fcf"),
-            stock.get("netCash"),
-            stock.get("peRatio"),
         ))
         inserted_count += 1
     except sqlite3.Error as e:
