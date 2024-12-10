@@ -2,7 +2,6 @@ import requests
 import sqlite3
 import os
 import sys
-import json
 from dotenv import load_dotenv
 from collections import Counter
 
@@ -18,20 +17,12 @@ if not os.path.exists(SQLITE_DATABASE_PATH):
     print(f"Error: SQLite file not found at {SQLITE_DATABASE_PATH}")
     sys.exit(1)
 
-# File to save raw API data
-RAW_DATA_FILE = "stock_list_dl.json"
-
 # Fetch data from API
 data = []
 url = URL
 response = requests.get(url)
 response_data = response.json().get("data", {}).get("data", [])
 data.extend(response_data)
-
-# Save raw data to a file
-with open(RAW_DATA_FILE, "w") as file:
-    json.dump(data, file, indent=4)
-print(f"Raw API data saved to {RAW_DATA_FILE}")
 
 print(f"Total stocks fetched: {len(data)}")
 
@@ -71,9 +62,20 @@ CREATE TABLE IF NOT EXISTS tech_stocks (
     net_income REAL,
     fcf REAL,
     net_cash REAL,
-    pe_ratio REAL
+    pe_ratio REAL,
+    current_eps REAL,
+    projected_eps REAL,
+    stock_pe_ratio_forward REAL,
+    earnings_growth REAL,
+    beta REAL,
+    current_price REAL,
+    intrinsic_value REAL,
+    fair_value REAL,
+    valuation_gap REAL,
+    valuation REAL
 );
 """)
+
 
 # Insert stocks into the database
 inserted_count = 0

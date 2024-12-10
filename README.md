@@ -1,5 +1,11 @@
 # stock_picker: CS210 Project
-Predicting Top 5 Tech Stocks To Buy
+Predicting Top n Tech Stocks To Buy
+
+Matthew Vandenberg (msv77), Jeet Gupta (jdg231), Jericho Mascarinas (jjm606)
+
+**Graders: Feel free to jump to [Running the Project Locally](#running-the-project-locally)!**
+
+# Our Development Process
 
 ## Our Python Environment
 
@@ -85,14 +91,13 @@ After inspecting the data in the Chrome developer tools, we saw that the site se
 
 So, we created `tech_stock_list_dl.py`, which let us download all the stocks listed on that website in JSON format. In a nutshell, it:
 
-1. Confirms that our database file exists
-2. Saves the full result of the API call to `stock_list_dl.json`
-3. Removes any duplicates. There weren't any, but we felt it was necessary given we were exploiting their open API, which sometimes uses pagination depending on the normal of columns we requested
-4. Prints out how many stocks it fetched
-5. Uses the **Sector** key to filter out stocks in the Technology sector, then prints out how many tech stocks it found
-6. Creates a table in our database called **tech_stocks**, with some of the data that we have in this call, while also adding more columns that we planned on filling in later from a more accurate stock source
-7. Inserts each tech stock into the table
-8. Printed out the count afterwards executed on the table to ensure that all the records were accounted for and inserted successfully
+1. Confirms that our database file exists, then makes the API call
+2. Removes any duplicates. There weren't any, but we felt it was necessary given we were exploiting their open API, which sometimes uses pagination depending on the normal of columns we requested
+3. Prints out how many stocks it fetched
+4. Uses the **Sector** key to filter out stocks in the Technology sector, then prints out how many tech stocks it found
+5. Creates a table in our database called **tech_stocks**, with some of the data that we have in this call, while also adding more columns that we planned on filling in later from a more accurate stock source
+6. Inserts each tech stock into the table
+7. Printed out the count afterwards executed on the table to ensure that all the records were accounted for and inserted successfully
 
 In all, we fetched **3319** stocks, where **559** of them ended up being technology stocks:
 
@@ -111,8 +116,23 @@ Number of records in the database: 559
 ## Section Intentionally Left Blank for the finance side of things
 
 
+### Running the Script
+Once we determined the proper formulas to use, we ran our script called `final_model.py`. We decided that we only wanted to focus on stocks that were at least a medium market cap (>$2B).
 
-(After talking about how we decided the top X stocks)
+After running, you'll now see the valuation data filled in the database:
+```sql
+-- Total number of tech stocks
+sqlite> SELECT COUNT(*) FROM tech_stocks;
+559
+
+-- Tech stocks that are at least a medium market cap
+sqlite> SELECT COUNT(*) FROM tech_stocks WHERE market_cap > 2000000000;
+192
+
+-- After running, the number of stocks with valuation data matches the amount of medium market cap stocks
+sqlite> SELECT COUNT(*) FROM tech_stocks WHERE valuation != "";
+192
+```
 
 ## Ticker Relevance in the Media
 
@@ -234,5 +254,116 @@ Together, with this data now in our database, we could make predictions on the b
 
 ## Making the Final Decision
 
-valuation gap
+To finalize our predictions for the top stocks to buy, we combined quantitative financial data with sentiment analysis. Below is an overview of the process we followed and the insights we derived.
+
+### Feature Engineering
+We engineered the following features for the model:
+- **Valuation Gap**: Difference between intrinsic value and current price. This metric identifies stocks that may be undervalued or overvalued relative to their intrinsic worth.
+- **Average Compound Sentiment**: Mean sentiment score for each ticker, aggregated from news articles. This reflects the overall public and media sentiment around a stock, which can influence its market performance.
+- **Market Cap**: Company size to ensure we focused on medium or large market cap stocks, as these are more stable and widely traded.
+
+Additionally, we calculated a target variable:
+- **Future Return**: `(Future Price - Current Price) / Current Price`. This allowed us to estimate the potential percentage gain or loss for each stock.
+
+### Exploratory Data Analysis
+To understand the relationships between features and the target variable, we performed the following analyses and visualizations:
+
+1. **Distribution of Valuation Gap**:
+   - This histogram highlighted the range and frequency of valuation gaps across stocks, showing clusters of undervalued and overvalued stocks.
+   - Outliers in this distribution may represent stocks with unusual valuation metrics due to specific events, such as recent mergers, acquisitions, or financial misreporting.
+   - Sample `./sample_plots/valuation_gap_distribution.png`:
+
+<p align="center">
+  <img src="./sample_plots/valuation_gap_distribution.png" width="300" title="Distribution of Valuation Gap">
+</p>
+
+2. **Distribution of Average Compound Sentiment**:
+   - Visualized the sentiment polarity of articles, showing whether stocks were discussed positively or negatively overall.
+   - Outliers in sentiment could arise from significant news events, such as scandals or breakthroughs, that drastically affect public perception.
+   - Sample `./sample_plots/compound_sentiment_distribution.png`:
+
+<p align="center">
+  <img src="./sample_plots/compound_sentiment_distribution.png" width="300" title="Distribution of Average Compound Sentiment">
+</p>
+
+3. **Scatterplot: Valuation Gap vs. Future Return**:
+   - Revealed a positive correlation, suggesting that higher valuation gaps tend to predict higher future returns.
+   - Outliers in this scatterplot might represent stocks with unusually high or low future returns driven by exceptional circumstances, such as market corrections or unexpected company performance.
+   - Sample `./sample_plots/valuation_vs_future.png`:
+
+<p align="center">
+  <img src="./sample_plots/valuation_vs_future.png" width="300" title="Valuation Gap vs. Future Return">
+</p>
+
+4. **Scatterplot: Sentiment vs. Future Return**:
+   - Showed how sentiment impacts future return, with stocks discussed positively in the media often having higher predicted returns.
+   - Outliers could be due to market overreaction or underreaction to news articles, where sentiment scores don’t align with actual stock performance.
+   - Sample `./sample_plots/sentiment_vs_future_return.png`:
+
+<p align="center">
+  <img src="./sample_plots/sentiment_vs_future_return.png" width="300" title="Sentiment vs. Future Return">
+</p>
+
+5. **Correlation Matrix**:
+   - Demonstrated relationships among features and the target, confirming their relevance for modeling.
+   - The correlation matrix highlighted that while valuation gap and sentiment had strong individual correlations with future returns, market cap had a moderate impact, which aligns with our hypothesis about its stabilizing effect.
+   - Sample `./sample_plots/correlation_matrix.png`:
+
+<p align="center">
+  <img src="./sample_plots/correlation_matrix.png" width="300" title="Correlation Matrix">
+</p>
+
+### Modeling Approach
+We trained a **Random Forest Regressor** using the `valuation_gap`, `avg_compound_sentiment`, and `market_cap` features to predict `future_return`. The steps included:
+
+1. **Train-Test Split**:
+   - Split the data into training (80%) and testing (20%) sets to ensure the model generalizes well to unseen data.
+
+2. **Model Training**:
+   - Used 100 trees in the Random Forest for robust predictions, taking advantage of its ability to handle nonlinear relationships and feature interactions.
+
+3. **Model Evaluation**:
+   - Achieved an R-squared score of **0.8325** on the test set, indicating a strong model fit and reliable predictive performance.
+
+4. **Visualizations**:
+   - **Predicted vs. Actual Future Returns**: Plotted predicted values against actuals to evaluate the model's accuracy. Outliers in this plot may represent stocks with unique external factors not captured by our features.
+   - Sample `./sample_plots/predicted_vs_actual_future_returns.png`:
+
+<p align="center">
+  <img src="./sample_plots/predicted_vs_actual_future_returns.png" width="300" title="Predicted vs. Actual Future Returns">
+</p>
+
+   - **Feature Importances**: Highlighted that `valuation_gap` and `avg_compound_sentiment` were the most predictive features. This aligns with our expectation that undervaluation and public sentiment significantly influence stock performance.
+   - Sample `./sample_plots/feature_importances.png`:
+
+<p align="center">
+  <img src="./sample_plots/feature_importances.png" width="300" title="Feature Importances">
+</p>
+
+### Insights
+The Random Forest model confirmed:
+- **Valuation Gap** is a key driver of future returns, as expected from its direct relationship with stock undervaluation or overvaluation.
+- Positive **Media Sentiment** is strongly associated with higher returns, reinforcing the importance of public perception in market dynamics.
+- Combining financial data and sentiment analysis provides a more holistic prediction model, addressing both quantitative and qualitative factors.
+
+### Stock Recommendations
+Using our trained model, we predicted future returns for the latest stock data and selected the top 10 performing stocks. Results included:
+
+- **Top 10 Stocks by Predicted Future Return**:
+  - Visualized as a horizontal bar chart for clarity.
+  - Outliers in the top-performing stocks may be driven by short-term catalysts, such as earnings reports or sector trends.
+  - Sample `./sample_plots/top_10_stocks_prediction.png`:
+
+<p align="center">
+  <img src="./sample_plots/top_10_stocks_prediction.png" width="300" title="Top 10 Stocks by Predicted Future Return">
+</p>
+
+These recommendations are dynamic and can be updated as new data becomes available.
+
+## Conclusion
+By integrating financial metrics with sentiment analysis, we developed a robust pipeline to identify top technology stocks. Our approach ensures that both market fundamentals and public sentiment are considered, leading to data-driven, actionable insights. While the model performs well, future iterations could benefit from additional features, such as sector-specific trends or global economic indicators, to further improve its predictive accuracy.
+
+# Running the Project Locally
+This guide will demonstrate how to run the project for yourself! Follow these steps:
+
 
