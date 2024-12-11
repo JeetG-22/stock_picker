@@ -39,7 +39,7 @@ db_path = os.getenv("DB_PATH")
 conn = sqlite3.connect(db_path)
 
 # Load tech_stocks that have valuation data
-df_stocks = pd.read_sql_query("SELECT * FROM tech_stocks WHERE valuation != \"\";", conn)
+df_stocks = pd.read_sql_query("SELECT * FROM tech_stocks WHERE valuation == \"undervalued\";", conn)
 
 # Load news and sentiments, and join them
 # We want to aggregate sentiment by ticker
@@ -184,7 +184,7 @@ plt.close()
 def pick_top_stocks(db_path, trained_model, features, n=5):
     # Connect to DB and get the latest stocks data
     conn = sqlite3.connect(db_path)
-    df_latest = pd.read_sql_query("SELECT * FROM tech_stocks WHERE valuation != \"\";", conn)
+    df_latest = pd.read_sql_query("SELECT * FROM tech_stocks WHERE valuation == \"undervalued\";", conn)
 
     # Also get latest sentiment data
     df_news = pd.read_sql_query("SELECT * FROM news;", conn)

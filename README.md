@@ -323,7 +323,7 @@ We trained a **Random Forest Regressor** using the `valuation_gap`, `avg_compoun
    - Used 100 trees in the Random Forest for robust predictions, taking advantage of its ability to handle nonlinear relationships and feature interactions.
 
 3. **Model Evaluation**:
-   - Achieved an R-squared score of **0.8325** on the test set, indicating a strong model fit and reliable predictive performance.
+   - Achieved an R-squared score of **0.9244** on the test set, indicating a strong model fit and reliable predictive performance.
 
 4. **Visualizations**:
    - **Predicted vs. Actual Future Returns**: Plotted predicted values against actuals to evaluate the model's accuracy. Outliers in this plot may represent stocks with unique external factors not captured by our features.
@@ -347,15 +347,15 @@ The Random Forest model confirmed:
 - Combining financial data and sentiment analysis provides a more holistic prediction model, addressing both quantitative and qualitative factors.
 
 ### Stock Recommendations
-Using our trained model, we predicted future returns for the latest stock data and selected the top 10 performing stocks. Results included:
+Using our trained model, we predicted future returns for the latest stock data and selected the top 25 best performing technology stocks. Results included:
 
-- **Top 10 Stocks by Predicted Future Return**:
+- **Top 25 Stocks by Predicted Future Return**:
   - Visualized as a horizontal bar chart for clarity.
   - Outliers in the top-performing stocks may be driven by short-term catalysts, such as earnings reports or sector trends.
-  - Sample `./sample_plots/top_10_stocks_prediction.png`:
+  - Sample `./sample_plots/top_25_stocks_prediction.png`:
 
 <p align="center">
-  <img src="./sample_plots/top_10_stocks_prediction.png" width="300" title="Top 10 Stocks by Predicted Future Return">
+  <img src="./sample_plots/top_25_stocks_prediction.png" width="300" title="Top 25 Stocks by Predicted Future Return">
 </p>
 
 These recommendations are dynamic and can be updated as new data becomes available.
@@ -387,7 +387,7 @@ Explanation:
 3. Create a Python virtual environment, and install our dependencies. You can do this with:
 ```shell
 python3 -m venv venv
-source venv/vin/activate
+source venv/bin/activate
 ```
 
 Make sure that your Terminal prompt is now preceeded with `(venv)`, like this:
@@ -406,6 +406,7 @@ When you open any of our Python files, you may see an underline saying that the 
 - Use <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> on MacOS or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> on other systems to open the VSCode Command Palette.
 - Search for **Python: Select Interpreter**
 - Select **Use Python from 'python.defaultinterpreterPath' setting./venv/bin/python**
+- *(This part isn't necessarily important if you don't plan on inspecting methods inside the python files)*
 
 4. Test the connection to your database file by running `python3 test_sqlite_connection.py`:
 ```shell
@@ -424,48 +425,75 @@ Number of records in the database: 559
 ```
 *Your numbers may slightly vary, but should be very close to these numbers.*
 
-6. Find all articles on these tickers and perform sentiment analysis by running `python3 find_articles.py`:
+6. Calculate financial data and make prediction with valuation data by running `python3 stock_valuation.py`:
+```shell
+(venv) user@computer stock_picker % python3 stock_valuation.py
+Found 192 tech stocks with market cap greater than or equal to 2000000000
+Processing ARM (10/192)
+...
+Filtered down to 151 stocks after data cleaning.
+
+```
+*See our writeup for why we chose a $2B market cap.*
+
+7. Find all articles on these tickers and perform sentiment analysis by running `python3 find_articles.py`:
 ```shell
 (venv) user@computer stock_picker % python3 find_articles.py
-Found 192 tech stocks in the database.
+Found 74 tech stocks in the database.
 AAPL (#1):      Found 231 articles, inserted 38 new articles, skipped 0 duplicate articles.
 NVDA (#2):      Found 237 articles, inserted 11 new articles, skipped 0 duplicate articles.
 ....
 ```
 *As the Finnhub.io API has a rate limit of 60 requests per minute, this may take a few minutes to run!*
 
-7. Calculate financial data and make prediction with valuation data by running `python3 stock_valuation.py`:
+8. Next, let's scrape the articles we found and perform sentiment analysis:
 ```shell
-(venv) user@computer stock_picker % python3 stock_valuation.py
-Found 192 tech stocks with market cap >= 2000000000
-Processing ARM
+(venv) user@computer sentiment_scraper % cd sentiment_scraper
+(venv) user@computer sentiment_scraper % scrapy crawl db_spider --nolog
+../db/database.sqlite
+Processing article 1296/1765 (73.42776203966007%)
 ...
 ```
-*See our writeup for why we chose a $2B market cap.*
 
 8. Finally, train the model based on financial and sentiment data and predict the top tech stocks to buy right now by running `python3 final_model.py`:
 ```shell
+(venv) user@computer stock_picker % cd ..
 (venv) user@computer stock_picker % python3 final_model.py
 Training the model and plotting the results to ./plots/...
 R-squared on test set: -0.2520
 Model trained and results plotted successfully.
-Enter the number of top stocks to pick: 10
+Enter the number of top stocks to pick: 25
 
-****************************************************************************************************
-Top 10 stock to buy now, based on stock and media data:
-****************************************************************************************************
+***************************************************************
+Top 25 stocks to buy now, based on stock and media data:
+***************************************************************
 
-  symbol  predicted_return
-0   CSCO          2.657976
-1   NVDA          2.441312
-2   AVGO          2.388270
-3    AMD          2.363867
-4   ADBE          2.220817
-5   ASML          1.861253
-6   MSFT          1.840647
-7   QCOM          1.705352
-8   AAPL          1.545829
-9   INTU          1.036270
+   symbol  predicted_return
+1    AVGO          1.615793
+2     APP          1.600393
+3     PTC          1.404382
+4    NVDA          1.216667
+5    SYNA          1.186900
+6    DDOG          1.179221
+7     AMD          1.172646
+8    ALTR          1.042899
+9    PCTY          1.004876
+10    TTD          0.984205
+11   BLKB          0.917687
+12   SRAD          0.896526
+13   ENTG          0.895907
+14   ALKT          0.869918
+15   ANSS          0.867849
+16   QCOM          0.724012
+17   ALRM          0.612942
+18   FTNT          0.586781
+19   PRGS          0.576283
+20   PLTR          0.572944
+21   ITRI          0.549364
+22   ACIW          0.513027
+23   TEAM          0.489249
+24   WDAY          0.488055
+25   NTAP          0.471363
 ```
 
 You'll see the final graphs outputted to the directory you chose!

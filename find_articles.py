@@ -23,7 +23,7 @@ to_date = date.today().isoformat()
 
 cur = conn.cursor()
 
-tickers = conn.execute("SELECT symbol FROM tech_stocks WHERE market_cap > 2000000000").fetchall()
+tickers = conn.execute("SELECT symbol FROM tech_stocks WHERE market_cap > 2000000000 AND valuation = \"undervalued\"").fetchall()
 tickers = [ticker[0] for ticker in tickers] # convert from list of tuples to list of strings
 
 print(f"Found {len(tickers)} tech stocks in the database.")

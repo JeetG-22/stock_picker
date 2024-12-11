@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 import yfinance as yf
 import sys
 import sqlite3
-import json
 import pandas as pd
 from scipy.stats import zscore
 
@@ -15,11 +14,6 @@ SQLITE_DATABASE_PATH = os.getenv("DB_PATH")
 if not os.path.exists(SQLITE_DATABASE_PATH):
     print(f"Error: SQLite file not found at {SQLITE_DATABASE_PATH}")
     sys.exit(1)
-    
-ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
-if (ALPHA_VANTAGE_API_KEY is None):
-    print("No Alpha Vantage API Key found")
-    exit(1)
 
 # Connect to your SQLite database file.
 conn = sqlite3.connect(SQLITE_DATABASE_PATH)
@@ -37,6 +31,8 @@ results = cur.fetchall()
 tickers = [item[0] for item in results]
 # print(tickers)
 
+print(f"Found {len(tickers)} tech stocks with market cap greater than or equal to {MARKET_CAP_THRESHOLD}")
+
 # Define risk-free rate (e.g., U.S. 10-year Treasury bond yield, assumed as 3%)
 risk_free_rate = .03
 
@@ -44,10 +40,13 @@ risk_free_rate = .03
 market_return = 0.08
 
 def fetch_stock_data(tickers, risk_free_rate, market_return):
+    count = 1
     data = {}
     FORWARD_WEIGHT = .4 #less because the projection might be inaccurate
     TRAILING_WEIGHT = .6
     for ticker in tickers:
+        print(f"\rProcessing {ticker} ({count}/{len(tickers)})", end="")
+        count = count + 1
         try:
             stock = yf.Ticker(ticker)
             earnings_growth = (stock.info.get("earningsGrowth", None) or 0.0)
@@ -116,6 +115,8 @@ data = data.dropna(subset=["current_price", "intrinsic_value", "fair_value"])
 data = data[(data['current_price'] > 0) & 
             (data['intrinsic_value'] > 0) & 
             (data['fair_value'] > 0)]
+print()
+print(f"Filtered down to {len(data)} stocks after data cleaning.")
 
 
 # Update rows with JSON data
