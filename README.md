@@ -178,7 +178,7 @@ Before fitting this finalized information into the database table, we need to ac
 
 1. Remove rows with negative or zero EPS values
 2. Remove rows where PE ratios are negative or zero
-3. Verify that earnings growth is above 0
+3. Verify that earnings growth is equal to or above 0
 4. Used Z-Score for outliers to sure that instrinsic ratio (instrinisic value / current price) of a stock is in between 2 standard deviations of the mean
 5. Removed rows that are missing or zero for current price, instrinsic value, and fair value
 

@@ -96,10 +96,10 @@ data = pd.DataFrame.from_dict(stock_data, orient="index")
 data = data[(data['projected_eps'] > 0)]
 
 # 2. Verify PE ratios
-date = data[(data['stock_pe_ratio_forward']) > 0]
+data = data[(data['stock_pe_ratio_forward']) > 0]
 
 # 3. Verify Earnings Growth
-date = data[(data['earnings_growth']) >= 10]
+data = data[(data['earnings_growth']) >= 0]
 
 # 4. Use Z-Score for outlier detection 
 data['intrinsic_ratio'] = data['intrinsic_value'] / data['current_price']
@@ -115,8 +115,7 @@ data = data.dropna(subset=["current_price", "intrinsic_value", "fair_value"])
 data = data[(data['current_price'] > 0) & 
             (data['intrinsic_value'] > 0) & 
             (data['fair_value'] > 0)]
-print()
-print(f"Filtered down to {len(data)} stocks after data cleaning.")
+print(f"\nFiltered down to {len(data)} stocks after data cleaning.")
 
 
 # Update rows with JSON data
