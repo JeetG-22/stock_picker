@@ -37,10 +37,6 @@ results = cur.fetchall()
 tickers = [item[0] for item in results]
 # print(tickers)
 
-qqq_ticker = "QQQ"
-qqq = yf.Ticker(qqq_ticker)
-qqq_pe_ratio = qqq.info.get("trailingPE")
-
 # Define risk-free rate (e.g., U.S. 10-year Treasury bond yield, assumed as 3%)
 risk_free_rate = .03
 
@@ -90,22 +86,12 @@ def fetch_stock_data(tickers, risk_free_rate, market_return):
             continue
     return data
 
-# stock_data = fetch_stock_data(tickers, risk_free_rate, market_return)
-
-# Save the results to a JSON file
-# with open("stock_data.json", "w") as json_file:
-#     json.dump(stock_data, json_file, indent=4)
-    
-print("Data saved to stock_data.json")
-
-# Load JSON data
-with open('stock_data.json', 'r') as file:
-    json_data = json.load(file)
+stock_data = fetch_stock_data(tickers, risk_free_rate, market_return)
     
 # Convert to DataFrame
-data = pd.DataFrame.from_dict(json_data, orient="index")
+data = pd.DataFrame.from_dict(stock_data, orient="index")
 
-# Display the DataFrame
+#Cleaning Data
 
 # 1. Remove rows with negative or zero EPS values
 data = data[(data['projected_eps'] > 0)]
@@ -131,30 +117,8 @@ data = data[(data['current_price'] > 0) &
             (data['intrinsic_value'] > 0) & 
             (data['fair_value'] > 0)]
 
-#update table
-new_columns = [
-    ("current_eps", "REAL"),
-    ("projected_eps", "REAL"),
-    ("stock_pe_ratio_forward", "REAL"),
-    ("stock_pe_ratio_trailing", "REAL"),
-    ("earnings_growth", "REAL"),
-    ("dividend_yield", "REAL"),
-    ("beta", "REAL"),
-    ("current_price", "REAL"),
-    ("intrinsic_value", "REAL"),
-    ("fair_value", "REAL"),
-    ("valuation_gap", "REAL"),
-    ("valuation", "TEXT")
-]
 
-for column, col_type in new_columns:
-    try:
-        cur.execute(f"ALTER TABLE tech_stocks ADD COLUMN {column} {col_type}")
-    except sqlite3.OperationalError:
-        # Column already exists
-        pass
-
-# Step 2: Update rows with JSON data
+# Update rows with JSON data
 for index, row in data.iterrows():
     # Prepare the update query
     update_query = f"""
@@ -165,7 +129,7 @@ for index, row in data.iterrows():
     update_values = tuple(row.values) + (index,)
     cur.execute(update_query, update_values)
 
-# Step 3: Remove rows not in the JSON file (optional)
+# Remove rows not in the JSON file (optional)
 symbols = tuple(data.index)
 delete_query = ("""
 DELETE FROM tech_stocks
@@ -179,9 +143,3 @@ conn.commit()
 # Close the connection
 conn.close()
 
-# Notes
-
-# Economic Indicator
-# Analytics API
-# Fundamentals API
-# Technical Indicator API later 
