@@ -18,20 +18,12 @@ if not os.path.exists(SQLITE_DATABASE_PATH):
     print(f"Error: SQLite file not found at {SQLITE_DATABASE_PATH}")
     sys.exit(1)
 
-# File to save raw API data
-RAW_DATA_FILE = "stock_list_dl.json"
-
 # Fetch data from API
 data = []
 url = URL
 response = requests.get(url)
 response_data = response.json().get("data", {}).get("data", [])
 data.extend(response_data)
-
-# Save raw data to a file
-with open(RAW_DATA_FILE, "w") as file:
-    json.dump(data, file, indent=4)
-print(f"Raw API data saved to {RAW_DATA_FILE}")
 
 print(f"Total stocks fetched: {len(data)}")
 
@@ -61,7 +53,19 @@ CREATE TABLE IF NOT EXISTS tech_stocks (
     symbol TEXT PRIMARY KEY,
     name TEXT,
     market_cap REAL,
-    sector TEXT
+    sector TEXT, 
+    current_eps REAL,
+    projected_eps REAL,
+    stock_pe_ratio_forward REAL,
+    stock_pe_ratio_trailing REAL,
+    earnings_growth REAL,
+    dividend_yield REAL,
+    beta REAL,
+    current_price REAL,
+    intrinsic_value REAL,
+    fair_value REAL,
+    valuation_gap REAL,
+    valuation TEXT
 );
 """)
 

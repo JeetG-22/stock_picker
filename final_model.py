@@ -1,6 +1,5 @@
 import sqlite3
 import pandas as pd
-import numpy as np
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -39,7 +38,7 @@ print(f"Training the model and plotting the results to {plot_path}...")
 db_path = os.getenv("DB_PATH")
 conn = sqlite3.connect(db_path)
 
-# Load tech_stocks
+# Load tech_stocks that have valuation data
 df_stocks = pd.read_sql_query("SELECT * FROM tech_stocks WHERE valuation != \"\";", conn)
 
 # Load news and sentiments, and join them
@@ -220,9 +219,9 @@ def pick_top_stocks(db_path, trained_model, features, n=5):
     return df_top[['symbol', 'predicted_return']]
 
 
-############################################
-
 print("Model trained and results plotted successfully.")
+
+############################################
 
 while True:
     n = input("Enter the number of top stocks to pick: ")
@@ -247,4 +246,5 @@ print("*" * 100)
 print()
 # Reset index for better display
 top_stocks.reset_index(drop=True, inplace=True)
+top_stocks.index = top_stocks.index + 1 # Start at 1, not 0
 print(top_stocks)
